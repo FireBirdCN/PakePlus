@@ -1,22 +1,391 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8x8 Video Matrix Controller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse-animation {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        .btn-active {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
+        }
+        .connection-status {
+            transition: all 0.3s ease;
+        }
+        .matrix-cell {
+            transition: all 0.3s ease;
+        }
+        .matrix-cell.active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8 text-blue-400 fade-in">8×8 Video Matrix Controller</h1>
+        
+        <!-- Connection Settings -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg fade-in">
+            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Connection Settings</h2>
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex-grow">
+                    <label class="block text-sm font-medium mb-1">WebSocket URL</label>
+                    <input type="text" id="wsUrl" value="ws://window.location.hostname:6432" 
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="connectBtn" class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-md font-medium transition-colors">
+                        <i class="fas fa-plug mr-2"></i>Connect
+                    </button>
+                    <button id="disconnectBtn" disabled class="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-md font-medium transition-colors opacity-50">
+                        <i class="fas fa-unplug mr-2"></i>Disconnect
+                    </button>
+                </div>
+                <div id="connectionStatus" class="flex items-center ml-auto connection-status">
+                    <span class="h-3 w-3 rounded-full bg-gray-500 mr-2"></span>
+                    <span>Disconnected</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Matrix Control -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg fade-in">
+            <h2 class="text-2xl font-semibold mb-6 text-blue-300">Matrix Control</h2>
+            
+            <div class="flex justify-between mb-6">
+                <!-- Input Buttons -->
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-medium mb-2">Inputs</h3>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="1">Input 1</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="2">Input 2</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="3">Input 3</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="4">Input 4</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="5">Input 5</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="6">Input 6</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="7">Input 7</button>
+                        <button class="input-btn px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md transition-colors" data-input="8">Input 8</button>
+                    </div>
+                </div>
+                
+                <!-- Matrix Visualization -->
+                <div class="flex items-center">
+                    <div class="grid grid-cols-8 gap-1">
+                        <!-- This will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Output Buttons -->
+                <div class="flex flex-col items-center">
+                    <h3 class="text-lg font-medium mb-2">Outputs</h3>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="1">Output 1</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="2">Output 2</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="3">Output 3</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="4">Output 4</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="5">Output 5</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="6">Output 6</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="7">Output 7</button>
+                        <button class="output-btn px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-md transition-colors" data-output="8">Output 8</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-center gap-4 mt-6">
+                <button id="allOutputsBtn" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md font-medium transition-colors">
+                    <i class="fas fa-expand mr-2"></i>All Outputs
+                </button>
+            </div>
+        </div>
+        
+        <!-- Buzzer Control -->
+        <div class="bg-gray-800 rounded-lg p-6 mb-8 shadow-lg fade-in">
+            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Buzzer Control</h2>
+            <div class="flex justify-center gap-6">
+                <button id="buzzerOnBtn" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-md font-medium transition-colors">
+                    <i class="fas fa-bell mr-2"></i>Buzzer On
+                </button>
+                <button id="buzzerOffBtn" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-md font-medium transition-colors">
+                    <i class="fas fa-bell-slash mr-2"></i>Buzzer Off
+                </button>
+            </div>
+        </div>
+        
+        <!-- Scene Management -->
+        <div class="bg-gray-800 rounded-lg p-6 shadow-lg fade-in">
+            <h2 class="text-2xl font-semibold mb-4 text-blue-300">Scene Management</h2>
+            <div class="flex flex-wrap items-center justify-center gap-4">
+                <select id="sceneSelect" class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                    <option value="1">Scene One</option>
+                    <option value="2">Scene Two</option>
+                    <option value="3">Scene Three</option>
+                    <option value="4">Scene Four</option>
+                    <option value="5">Scene Five</option>
+                    <option value="6">Scene Six</option>
+                    <option value="7">Scene Seven</option>
+                    <option value="8">Scene Eight</option>
+                    <option value="9">Scene Nine</option>
+                    <option value="10">Scene Ten</option>
+                </select>
+                <button id="saveSceneBtn" class="px-6 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md font-medium transition-colors">
+                    <i class="fas fa-save mr-2"></i>Save Scene
+                </button>
+                <button id="recallSceneBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-md font-medium transition-colors">
+                    <i class="fas fa-file-import mr-2"></i>Recall Scene
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
-
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit">Greet</button>
-            </form>
-            <p id="greet-msg"></p>
-        </main>
-    </body>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // WebSocket variables
+            let socket = null;
+            let isConnected = false;
+            let selectedInput = null;
+            let selectedOutput = null;
+            
+            // DOM elements
+            const wsUrlInput = document.getElementById('wsUrl');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const inputButtons = document.querySelectorAll('.input-btn');
+            const outputButtons = document.querySelectorAll('.output-btn');
+            const allOutputsBtn = document.getElementById('allOutputsBtn');
+            const buzzerOnBtn = document.getElementById('buzzerOnBtn');
+            const buzzerOffBtn = document.getElementById('buzzerOffBtn');
+            const sceneSelect = document.getElementById('sceneSelect');
+            const saveSceneBtn = document.getElementById('saveSceneBtn');
+            const recallSceneBtn = document.getElementById('recallSceneBtn');
+            const matrixGrid = document.querySelector('.grid.grid-cols-8');
+            
+            // Initialize matrix visualization
+            function initMatrix() {
+                matrixGrid.innerHTML = '';
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'matrix-cell w-8 h-8 bg-gray-700 rounded-sm flex items-center justify-center text-xs cursor-pointer';
+                        cell.dataset.input = i + 1;
+                        cell.dataset.output = j + 1;
+                        cell.title = `Input ${i+1} → Output ${j+1}`;
+                        
+                        // Add click event to set routing
+                        cell.addEventListener('click', function() {
+                            const input = this.dataset.input;
+                            const output = this.dataset.output;
+                            sendCommand(`${input}B${output}.`);
+                            
+                            // Highlight the selected route
+                            document.querySelectorAll('.matrix-cell').forEach(c => c.classList.remove('bg-blue-500'));
+                            this.classList.add('bg-blue-500');
+                            
+                            // Pulse animation for visual feedback
+                            this.classList.add('active');
+                            setTimeout(() => this.classList.remove('active'), 300);
+                        });
+                        
+                        matrixGrid.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Connect to WebSocket
+            function connect() {
+                if (isConnected) return;
+                
+                const url = wsUrlInput.value.trim();
+                if (!url) {
+                    alert('Please enter a valid WebSocket URL');
+                    return;
+                }
+                
+                try {
+                    socket = new WebSocket('ws://'+window.location.hostname+':'+'6432');
+                    
+                    socket.onopen = function() {
+                        isConnected = true;
+                        updateConnectionStatus(true);
+                        connectBtn.disabled = true;
+                        disconnectBtn.disabled = false;
+                        console.log('WebSocket connected');
+                    };
+                    
+                    socket.onclose = function() {
+                        isConnected = false;
+                        updateConnectionStatus(false);
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                        console.log('WebSocket disconnected');
+                    };
+                    
+                    socket.onerror = function(error) {
+                        console.error('WebSocket error:', error);
+                        alert('Connection error: ' + error.message);
+                    };
+                    
+                    socket.onmessage = function(event) {
+                        console.log('Received:', event.data);
+                        // Here you could process incoming messages if needed
+                    };
+                    
+                } catch (error) {
+                    console.error('WebSocket connection error:', error);
+                    alert('Connection error: ' + error.message);
+                }
+            }
+            
+            // Disconnect from WebSocket
+            function disconnect() {
+                if (socket && isConnected) {
+                    socket.close();
+                }
+            }
+            
+            // Update connection status UI
+            function updateConnectionStatus(connected) {
+                const statusDot = connectionStatus.querySelector('span:first-child');
+                const statusText = connectionStatus.querySelector('span:last-child');
+                
+                if (connected) {
+                    statusDot.className = 'h-3 w-3 rounded-full bg-green-500 mr-2 pulse-animation';
+                    statusText.textContent = 'Connected';
+                    connectionStatus.classList.add('text-green-400');
+                    connectionStatus.classList.remove('text-gray-400');
+                } else {
+                    statusDot.className = 'h-3 w-3 rounded-full bg-gray-500 mr-2';
+                    statusText.textContent = 'Disconnected';
+                    connectionStatus.classList.remove('text-green-400');
+                    connectionStatus.classList.add('text-gray-400');
+                }
+            }
+            
+            // Send command through WebSocket
+            function sendCommand(command) {
+                if (!isConnected || !socket) {
+                    alert('Not connected to WebSocket');
+                    return;
+                }
+                
+                try {
+                    socket.send(command);
+                    console.log('Sent:', command);
+                    
+                    // Visual feedback
+                    const feedback = document.createElement('div');
+                    feedback.className = 'fixed bottom-4 right-4 bg-gray-800 text-green-400 px-4 py-2 rounded-md shadow-lg fade-in';
+                    feedback.textContent = `Command sent: ${command}`;
+                    document.body.appendChild(feedback);
+                    
+                    setTimeout(() => {
+                        feedback.classList.remove('fade-in');
+                        feedback.classList.add('opacity-0');
+                        setTimeout(() => feedback.remove(), 300);
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Error sending command:', error);
+                    alert('Error sending command: ' + error.message);
+                }
+            }
+            
+            // Event listeners
+            connectBtn.addEventListener('click', connect);
+            disconnectBtn.addEventListener('click', disconnect);
+            
+            // Input button selection
+            inputButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedInput = this.dataset.input;
+                    
+                    // Update UI
+                    inputButtons.forEach(b => b.classList.remove('btn-active', 'bg-blue-800'));
+                    this.classList.add('btn-active', 'bg-blue-800');
+                    
+                    // If output is already selected, send command immediately
+                    if (selectedOutput) {
+                        sendCommand(`${selectedInput}B${selectedOutput}.`);
+                    }
+                });
+            });
+            
+            // Output button selection
+            outputButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedOutput = this.dataset.output;
+                    
+                    // Update UI
+                    outputButtons.forEach(b => b.classList.remove('btn-active', 'bg-purple-800'));
+                    this.classList.add('btn-active', 'bg-purple-800');
+                    
+                    // If input is already selected, send command immediately
+                    if (selectedInput) {
+                        sendCommand(`${selectedInput}B${selectedOutput}.`);
+                    }
+                });
+            });
+            
+            // All outputs button
+            allOutputsBtn.addEventListener('click', function() {
+                if (selectedInput) {
+                    sendCommand(`${selectedInput}All.`);
+                    
+                    // Visual feedback
+                    this.classList.add('bg-indigo-800');
+                    setTimeout(() => this.classList.remove('bg-indigo-800'), 300);
+                } else {
+                    alert('Please select an input first');
+                }
+            });
+            
+            // Buzzer controls
+            buzzerOnBtn.addEventListener('click', function() {
+                sendCommand('/:BellOn;');
+                this.classList.add('bg-green-800');
+                setTimeout(() => this.classList.remove('bg-green-800'), 300);
+            });
+            
+            buzzerOffBtn.addEventListener('click', function() {
+                sendCommand('/:BellOff;');
+                this.classList.add('bg-red-800');
+                setTimeout(() => this.classList.remove('bg-red-800'), 300);
+            });
+            
+            // Scene controls
+            saveSceneBtn.addEventListener('click', function() {
+                const sceneNum = sceneSelect.value;
+                sendCommand(`Save${sceneNum}.`);
+                this.classList.add('bg-yellow-800');
+                setTimeout(() => this.classList.remove('bg-yellow-800'), 300);
+            });
+            
+            recallSceneBtn.addEventListener('click', function() {
+                const sceneNum = sceneSelect.value;
+                sendCommand(`Recall${sceneNum}.`);
+                this.classList.add('bg-blue-800');
+                setTimeout(() => this.classList.remove('bg-blue-800'), 300);
+            });
+            
+            // Initialize the matrix visualization
+            initMatrix();
+			connect() ;
+        });
+    </script>
+</body>
 </html>
